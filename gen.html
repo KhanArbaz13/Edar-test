@@ -1,0 +1,584 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Accident Report Generator</title>
+    <!-- Load Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* Custom font */
+        body { font-family: 'Inter', sans-serif; }
+        /* Style for the generated summary block */
+        #summaryOutput {
+            /* Now uses standard text wrapping, no more pre-wrap */
+            line-height: 1.6;
+        }
+        /* Custom styling for standard text/select inputs */
+        .input-field {
+            /* Lighter border, subtle focus ring */
+            @apply w-full p-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition duration-150;
+        }
+        /* New class for date/time inputs which are now wrapped, so they don't need outer padding/borders */
+        .input-field-naked {
+            /* Remove border/padding/focus ring as the wrapper handles it */
+            @apply w-full p-0 border-none focus:ring-0 focus:border-none text-base text-gray-800 bg-transparent;
+        }
+    </style>
+</head>
+<body class="bg-white min-h-screen p-4 sm:p-8">
+    <!-- Main Form Container - Reduced Shadow -->
+    <form id="reportForm" class="max-w-4xl mx-auto bg-white shadow-md rounded-lg p-6 md:p-10" onsubmit="generateSummary(event)">
+        <!-- Title - Darker, cleaner color -->
+        <h1 class="text-3xl font-extrabold text-gray-900 mb-4 text-center">Incident Summary Generator</h1>
+        <p class="text-gray-600 mb-8 text-center text-sm">Enter the details of the accident to generate a concise, standardized official report.</p>
+
+        <!-- Main Accident Details -->
+        <div class="space-y-6">
+            <!-- Heading - Lighter Separator -->
+            <h2 class="text-xl font-semibold text-gray-800 border-b border-gray-200 pb-2">Accident Core Details</h2>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                
+                <!-- Date Input Wrapper: Clicking anywhere opens the date picker -->
+                <div class="p-3 border border-gray-200 rounded-lg cursor-pointer hover:bg-gray-50 transition duration-150" 
+                     onclick="document.getElementById('accidentDate').click()">
+                    <label for="accidentDate" class="block text-xs font-semibold uppercase text-gray-500 mb-1">Date of Accident</label>
+                    <!-- MAX YEAR SET TO 2100 -->
+                    <input type="date" id="accidentDate" class="input-field-naked" title="Date of Accident" max="2100-12-31" required>
+                </div>
+                
+                <!-- Time Input Wrapper: Clicking anywhere opens the time picker -->
+                <div class="p-3 border border-gray-200 rounded-lg cursor-pointer hover:bg-gray-50 transition duration-150" 
+                     onclick="document.getElementById('accidentTime').click()">
+                    <label for="accidentTime" class="block text-xs font-semibold uppercase text-gray-500 mb-1">Time (Approx.)</label>
+                    <input type="time" id="accidentTime" class="input-field-naked" title="Time (Approx.)" required>
+                </div>
+            </div>
+            
+            <!-- Standard Input fields retain the 'input-field' class -->
+            <input type="text" id="accidentLocation" class="input-field" placeholder="Location (e.g., Main Street, City)" required>
+            
+            <select id="accidentCause" class="input-field" required>
+                <option value="" disabled selected>Select Specific Cause of Accident</option>
+                <option value="Non Provision of Parapets/Crash Barrier on Outer Curve">Non Provision of Parapets/Crash Barrier on Outer Curve</option>
+                <option value="Long Distance Covered/Driver Restless">Long Distance Covered/Driver Restless</option>
+                <option value="Fell Down From Vehicle">Fell Down From Vehicle</option>
+                <option value="Illegal Parking on Road">Illegal Parking on Road</option>
+                <option value="Blind Bend / Curve">Blind Bend / Curve</option>
+                <option value="Alcohol abuse">Alcohol abuse</option>
+                <option value="Carrying people in loaded vehicle">Carrying people in loaded vehicle</option>
+                <option value="Changing lane without care">Changing lane without care</option>
+                <option value="Dangerous Overtaking">Dangerous Overtaking</option>
+                <option value="Distraction to Driver">Distraction to Driver</option>
+                <option value="Driving against flow of traffic">Driving against flow of traffic</option>
+                <option value="Drugs Abuse">Drugs Abuse</option>
+                <option value="High Speed">High Speed</option>
+                <option value="Inattentive Turn">Inattentive Turn</option>
+                <option value="Accident Due to road Condition">Accident Due to road Condition</option>
+                <option value="Accident Due to Weather Condition">Accident Due to Weather Condition</option>
+                <option value="Accident due to Heavy Traffic">Accident due to Heavy Traffic</option>
+                <option value="Non-respect of rights of way rules">Non-respect of rights of way rules</option>
+                <option value="Red Light jumping">Red Light jumping</option>
+                <option value="Overloaded">Overloaded</option>
+                <option value="Accident due to Vehicle Defect">Accident due to Vehicle Defect</option>
+                <option value="Over speed while crossing Zebra crossing">Over speed while crossing Zebra crossing</option>
+                <option value="Over speed while crossing speed breaker">Over speed while crossing speed breaker</option>
+            </select>
+            <!-- END CAUSE DROPDOWN -->
+
+            <input type="text" id="accidentStatus" class="input-field" value="Investigation ongoing" placeholder="Case Status (e.g., IPC Sections, Investigation ongoing)" required>
+
+            <!-- Victims Section -->
+            <h2 class="text-xl font-semibold text-gray-800 border-b border-gray-200 pb-2 pt-6">Involved Parties (Victims/Drivers)</h2>
+            <div id="victimsContainer" class="space-y-4">
+                <!-- Initial victim row will be added by JS -->
+            </div>
+
+            <!-- Add Button - Flat, outlined style -->
+            <button type="button" onclick="addVictim()" class="w-full py-3 bg-white text-green-700 border border-green-400 font-bold rounded-lg hover:bg-green-50 transition duration-200">
+                + Add Another Involved Party
+            </button>
+        </div>
+
+        <!-- Generate Button - Primary, darker color -->
+        <div class="mt-8">
+            <button type="submit" id="generateBtn" class="w-full py-4 bg-gray-800 text-white text-xl font-extrabold rounded-lg hover:bg-gray-900 transition duration-200 shadow-lg">
+                Generate Official Summary
+            </button>
+        </div>
+
+        <!-- Loading Indicator -->
+        <div id="loadingIndicator" class="mt-6 hidden text-center">
+            <p class="text-gray-500 mt-2">Generating report...</p>
+        </div>
+
+        <!-- Summary Output - Neutral background and border -->
+        <div class="mt-8 border-t pt-8">
+            <h2 class="text-xl font-semibold text-gray-800 mb-4">Generated Report (Single Paragraph)</h2>
+            <div id="summaryOutput" class="bg-gray-50 p-4 border border-gray-200 rounded-lg text-gray-800 text-base italic min-h-[5rem] whitespace-normal">
+                The generated accident report will appear here after you click the button.
+            </div>
+        </div>
+    </form>
+
+    <script>
+        // Global variable to store the last entered hospital name
+        let lastEnteredHospitalName = ''; 
+
+        // --- Hospital Name Management for 'Same as Above' feature ---
+
+        /**
+         * Updates the global hospital name and enables all 'Same as Above' buttons.
+         */
+        function updateLastHospitalName(name) {
+            const trimmedName = name.trim();
+            // Update the global state if a valid name is entered
+            if (trimmedName && trimmedName !== 'N/A') {
+                lastEnteredHospitalName = trimmedName;
+            } else if (!trimmedName && document.querySelectorAll('[data-type="hospital"]').length === 1) {
+                // If the user clears the only hospital name, clear the global state
+                lastEnteredHospitalName = '';
+            }
+            
+            // Re-check all 'Same as Above' buttons based on current global state
+            document.querySelectorAll('button[onclick^="applySameHospitalName"]').forEach(btn => {
+                btn.disabled = !lastEnteredHospitalName;
+                btn.classList.toggle('disabled:opacity-50', !lastEnteredHospitalName);
+            });
+        }
+
+        /**
+         * Applies the last recorded hospital name to the current input field.
+         */
+        function applySameHospitalName(buttonElement) {
+            const hospitalGroup = buttonElement.closest('[data-type="hospital-group"]');
+            const hospitalInput = hospitalGroup.querySelector('[data-type="hospital"]');
+
+            if (lastEnteredHospitalName) {
+                hospitalInput.value = lastEnteredHospitalName;
+                hospitalInput.dispatchEvent(new Event('input')); // Trigger updateLastHospitalName (no-op here)
+            }
+        }
+        
+        // --- Victim Management (Visibility & Required Toggles) ---
+        window.onload = function() {
+            addVictim(); // Add the initial victim row on load
+        };
+
+        /**
+         * Toggles the visibility and required status of vehicle inputs based on the party's role.
+         */
+        function handleRoleChange(roleSelect) {
+            const row = roleSelect.closest('[id^="victimRow-"]');
+            const vehicleTypeInput = row.querySelector('[data-type="vehicle-type"]');
+            const vehicleRegInput = row.querySelector('[data-type="vehicle-reg"]');
+            const vehicleGroup = row.querySelector('.vehicle-fields');
+            
+            if (!vehicleTypeInput || !vehicleRegInput || !vehicleGroup) return;
+
+            if (roleSelect.value === 'Pedestrian' || roleSelect.value === 'Cyclist') {
+                vehicleGroup.style.display = 'none';
+                vehicleTypeInput.removeAttribute('required');
+                vehicleRegInput.removeAttribute('required');
+
+                vehicleTypeInput.value = 'N/A'; // Set default for template logic
+                vehicleRegInput.value = 'N/A';
+            } else {
+                vehicleGroup.style.display = 'grid'; // Show the group
+                vehicleTypeInput.setAttribute('required', 'required');
+                vehicleRegInput.setAttribute('required', 'required');
+                
+                // Clear values if they were set to 'N/A'
+                if (vehicleTypeInput.value === 'N/A') vehicleTypeInput.value = '';
+                if (vehicleRegInput.value === 'N/A') vehicleRegInput.value = '';
+            }
+        }
+
+        /**
+         * Toggles the visibility and required status of Hospital and DOD/TOD inputs.
+         */
+        function handleInjuryChange(injurySelect) {
+            const row = injurySelect.closest('[id^="victimRow-"]');
+            const injuryStatus = injurySelect.value;
+            
+            // DOD/TOD fields
+            const dodContainer = row.querySelector('.dod-fields');
+            const dodInput = row.querySelector('[data-type="dod"]');
+            const todInput = row.querySelector('[data-type="tod"]');
+            
+            // Hospital group and input
+            const hospitalGroup = row.querySelector('[data-type="hospital-group"]'); 
+            const hospitalInput = row.querySelector('[data-type="hospital"]');
+            
+            
+            // --- 1. Handle Date/Time of Death Fields (DOD/TOD) ---
+            if (injuryStatus === 'Deceased (Hospitalized)') {
+                dodContainer.style.display = 'grid'; // Use grid for layout
+                dodInput.setAttribute('required', 'required');
+                todInput.setAttribute('required', 'required');
+            } else {
+                dodContainer.style.display = 'none';
+                dodInput.removeAttribute('required');
+                todInput.removeAttribute('required');
+                // Reset value when hidden
+                dodInput.value = '';
+                todInput.value = '';
+            }
+
+            // --- 2. Handle Hospital Name Field ---
+            const requiresHospital = injuryStatus === 'Deceased (Hospitalized)' || injuryStatus === 'Grievous Hurt' || injuryStatus === 'Minor Injuries';
+
+            if (hospitalGroup && hospitalInput) {
+                if (requiresHospital) {
+                    hospitalGroup.style.display = 'flex'; // Show the group (using flex for internal layout)
+                    hospitalInput.setAttribute('required', 'required');
+
+                    // Reset value if it was 'N/A'
+                    if (hospitalInput.value === 'N/A') {
+                        hospitalInput.value = '';
+                    }
+                } else {
+                    hospitalGroup.style.display = 'none'; // Hide the group
+                    hospitalInput.removeAttribute('required');
+                    hospitalInput.value = 'N/A'; // Set 'N/A' for template logic
+                }
+            }
+            // Ensure hospital state is up-to-date
+            updateLastHospitalName(hospitalInput.value);
+        }
+
+        /**
+         * Adds a new set of input fields for an involved party (victim/driver).
+         */
+        function addVictim() {
+            const container = document.getElementById('victimsContainer');
+            const uniqueId = Date.now().toString(36) + Math.random().toString(36).substring(2, 5); 
+
+            const victimHtml = `
+                <div id="victimRow-${uniqueId}" class="p-4 border border-gray-200 rounded-lg bg-white grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                    <!-- Name & Age - 'required' added -->
+                    <input type="text" data-type="name" class="input-field lg:col-span-2" placeholder="Name (e.g., John Doe)" required>
+                    <input type="number" data-type="age" class="input-field" placeholder="Age (Yrs)" min="1" required>
+                    
+                    <!-- Role Dropdown - 'required' added -->
+                    <select data-type="role" onchange="handleRoleChange(this)" class="input-field" required>
+                        <option value="" disabled selected>Select Role</option>
+                        <option value="Driver">Driver</option>
+                        <option value="Passenger">Passenger</option>
+                        <option value="Pedestrian">Pedestrian</option>
+                        <option value="Cyclist">Cyclist</option>
+                    </select>
+
+                    <!-- Vehicle Type & Reg. No. (Hidden by default, shown for Driver/Passenger) -->
+                    <div class="vehicle-fields lg:col-span-4 grid grid-cols-1 md:grid-cols-2 gap-4" style="display: none;">
+                        <input type="text" data-type="vehicle-type" class="input-field" placeholder="Vehicle Type (e.g., Car, Bus, Motorbike)">
+                        <input type="text" data-type="vehicle-reg" class="input-field" placeholder="Vehicle Reg. No. (e.g., DL1C AAAA0000)">
+                    </div>
+
+                    
+                    <!-- Injury Status - 'required' added -->
+                    <select data-type="injury" onchange="handleInjuryChange(this)" class="input-field lg:col-span-4" required>
+                        <option value="" disabled selected>Select Injury Status</option>
+                        <option value="Fatal Injuries">Fatal Injuries (On Spot)</option>
+                        <option value="Deceased (Hospitalized)">Deceased (Succumbed to Injuries)</option>
+                        <option value="Grievous Hurt">Grievous Hurt (Admitted)</option>
+                        <option value="Minor Injuries">Minor Injuries (Discharged)</option>
+                        <option value="No Injuries">No Injuries</option>
+                    </select>
+
+                    <!-- Hospital Name Input & Same as Above Toggle (CONDITIONAL required) -->
+                    <!-- Same as Above Button - Minimalistic style -->
+                    <div data-type="hospital-group" class="lg:col-span-4 flex space-x-2" style="display: none;">
+                        <input type="text" 
+                               data-type="hospital" 
+                               oninput="updateLastHospitalName(this.value)"
+                               class="input-field flex-grow" 
+                               placeholder="Hospital Name (MANDATORY for injuries)">
+                        <button type="button" 
+                                onclick="applySameHospitalName(this)"
+                                class="flex-shrink-0 px-4 py-2 bg-white text-gray-700 border border-gray-300 hover:bg-gray-100 transition duration-150 text-sm ${lastEnteredHospitalName ? '' : 'disabled:opacity-50'}"
+                                title="Use the hospital name from the previous entry."
+                                ${lastEnteredHospitalName ? '' : 'disabled'}>
+                            Same as Above
+                        </button>
+                    </div>
+
+
+                    <!-- Date/Time of Death (CONDITIONAL required) - Toned down red alert -->
+                    <div class="dod-fields hidden col-span-full grid grid-cols-1 md:grid-cols-3 gap-4 p-2 bg-red-50/50 border border-red-100 rounded-lg">
+                        <label class="md:col-span-1 flex items-center font-medium text-red-700">Date/Time of Death (MANDATORY):</label>
+                        <!-- MAX YEAR SET TO 2100 -->
+                        <input type="date" data-type="dod" class="input-field-naked" title="Date of Death" max="2100-12-31">
+                        <input type="time" data-type="tod" class="input-field-naked" title="Time of Death">
+                    </div>
+
+                    <!-- Remove Button - Flat, outlined style -->
+                    <button type="button" onclick="removeVictim('${uniqueId}')" class="col-span-full py-2 bg-white text-red-700 border border-red-400 font-medium rounded-lg hover:bg-red-50 transition duration-200">
+                        Remove Party
+                    </button>
+                </div>
+            `;
+            container.insertAdjacentHTML('beforeend', victimHtml);
+            
+            updateRemoveButtons();
+            
+            // Initialize visibility for the new row
+            const newRoleSelect = container.lastElementChild.querySelector('[data-type="role"]');
+            const newInjurySelect = container.lastElementChild.querySelector('[data-type="injury"]');
+            
+            if (newRoleSelect) {
+                handleRoleChange(newRoleSelect); // Set visibility for vehicle fields
+            }
+            if (newInjurySelect) {
+                handleInjuryChange(newInjurySelect); // Set visibility for hospital/DOD fields
+            }
+        }
+
+        /**
+         * Removes a victim input row.
+         */
+        function removeVictim(id) {
+            const row = document.getElementById(`victimRow-${id}`);
+            if (row) {
+                row.remove();
+                updateRemoveButtons();
+                // Check if the hospital name needs to be cleared globally if the last entry was deleted
+                const hospitalInput = row.querySelector('[data-type="hospital"]');
+                if (hospitalInput && hospitalInput.value.trim() === lastEnteredHospitalName) {
+                     // Check if any other hospital input has the same name
+                    const stillPresent = Array.from(document.querySelectorAll('[data-type="hospital"]'))
+                                            .some(input => input.value.trim() === lastEnteredHospitalName);
+                    if (!stillPresent) {
+                        lastEnteredHospitalName = ''; // Clear if this was the last one
+                        updateLastHospitalName(''); // Re-check buttons
+                    }
+                }
+            }
+        }
+
+        /**
+         * Ensures that the remove button is only enabled when there is more than one victim.
+         */
+        function updateRemoveButtons() {
+            const container = document.getElementById('victimsContainer');
+            const rows = container.querySelectorAll('[id^="victimRow-"]');
+            
+            rows.forEach(row => {
+                const removeButton = row.querySelector('button[onclick^="removeVictim"]');
+                if (removeButton) {
+                    removeButton.disabled = (rows.length === 1);
+                    removeButton.classList.toggle('opacity-50', rows.length === 1); 
+                    // Update hover classes for minimalistic theme
+                    removeButton.classList.toggle('hover:bg-red-50', rows.length > 1);
+                    removeButton.classList.toggle('hover:bg-red-600', rows.length === 1); // Maintain original hover style when disabled/only one
+                }
+            });
+        }
+
+        /**
+         * Collects all structured data from the form.
+         * @returns {Object} The structured data object.
+         */
+        function collectData() {
+            const data = {};
+            
+            // 1. Core Accident Details
+            data.date = document.getElementById('accidentDate').value.trim();
+            data.time = document.getElementById('accidentTime').value.trim();
+            data.location = document.getElementById('accidentLocation').value.trim();
+            data.cause = document.getElementById('accidentCause').value.trim();
+            data.status = document.getElementById('accidentStatus').value.trim();
+
+
+            // 2. Victims Details
+            const victimsContainer = document.getElementById('victimsContainer');
+            const victimRows = victimsContainer.querySelectorAll('[id^="victimRow-"]');
+            const victims = [];
+
+            victimRows.forEach(row => {
+                const victim = {};
+                
+                // Get elements
+                const nameInput = row.querySelector('[data-type="name"]');
+                const ageInput = row.querySelector('[data-type="age"]');
+                const roleSelect = row.querySelector('[data-type="role"]');
+                const injurySelect = row.querySelector('[data-type="injury"]');
+                const vehicleTypeInput = row.querySelector('[data-type="vehicle-type"]');
+                const vehicleRegInput = row.querySelector('[data-type="vehicle-reg"]');
+                const hospitalInput = row.querySelector('[data-type="hospital"]');
+                const dodInput = row.querySelector('[data-type="dod"]');
+                const todInput = row.querySelector('[data-type="tod"]');
+
+                // A. Always Required Fields
+                victim.name = nameInput.value.trim();
+                victim.age = ageInput.value.trim();
+                victim.role = roleSelect.value.trim();
+                victim.injury = injurySelect.value.trim();
+
+                // B. Vehicle Details (Type and Reg)
+                // If the fields are visible (Driver/Passenger), we use their value. If hidden (Ped/Cyc), they are 'N/A'.
+                victim.vehicleType = vehicleTypeInput.value.trim() || 'N/A';
+                victim.vehicleReg = vehicleRegInput.value.trim() || 'N/A';
+                
+                // C. DOD/TOD (Only relevant if Deceased-Hospitalized)
+                victim.dod = dodInput.value.trim() || 'N/A';
+                victim.tod = todInput.value.trim() || 'N/A';
+                
+                // D. Hospital (Only relevant if any injury)
+                victim.hospital = hospitalInput.value.trim() || 'N/A';
+
+                victims.push(victim);
+            });
+            
+            // Return full data object
+            return {
+                date: data.date,
+                time: data.time,
+                location: data.location,
+                cause: data.cause,
+                status: data.status,
+                victims: victims
+            };
+        }
+
+        // --- Template Generation Logic (Updated for single paragraph) ---
+
+        /**
+         * Generates a descriptive sentence summarizing all involved parties (Name, Role, Vehicle, Reg. No.).
+         */
+        function formatVictimDetails(victims) {
+            const details = victims.map(v => {
+                const agePart = v.age ? ` (age ${v.age})` : '';
+                let vehiclePart = '';
+                
+                if (v.role === 'Driver' || v.role === 'Passenger') {
+                    const type = v.vehicleType !== 'N/A' ? v.vehicleType : 'a vehicle';
+                    const reg = v.vehicleReg !== 'N/A' ? ` (Reg. No. ${v.vehicleReg})` : '';
+                    
+                    if (v.role === 'Driver') {
+                        vehiclePart = ` driving a ${type}${reg}`;
+                    } else if (v.role === 'Passenger') {
+                        vehiclePart = ` a passenger in a ${type}${reg}`;
+                    }
+                }
+                
+                return `${v.role} ${v.name}${agePart}${vehiclePart}`;
+            });
+            
+            if (details.length === 1) {
+                return details[0];
+            } else if (details.length === 2) {
+                return details.join(' and ');
+            } else {
+                const last = details.pop();
+                return `${details.join(', ')}, and ${last}`;
+            }
+        }
+
+        /**
+         * Generates a concise summary of the injuries sustained by all victims, returning a single sentence/string.
+         */
+        function formatVictimResults(victims) {
+            const injuryGroups = victims.reduce((acc, v) => {
+                const key = v.injury;
+                acc[key] = acc[key] || [];
+                acc[key].push(v);
+                return acc;
+            }, {});
+
+            const resultSentences = [];
+            // Order for narrative flow
+            const injuryOrder = ["Fatal Injuries", "Deceased (Hospitalized)", "Grievous Hurt", "Minor Injuries", "No Injuries"];
+            
+            for (const injury of injuryOrder) {
+                if (injuryGroups[injury] && injuryGroups[injury].length > 0) {
+                    
+                    if (injury === "Fatal Injuries") {
+                        const names = injuryGroups[injury].map(v => `${v.role} ${v.name}`).join(', ');
+                        resultSentences.push(`Fatalities included: ${names}, who sustained fatal injuries and were declared brought dead.`);
+                    } else if (injury === "Deceased (Hospitalized)") {
+                        const deceasedList = injuryGroups[injury].map(v => {
+                            const date = v.dod !== 'N/A' ? v.dod : 'an unknown date';
+                            const time = v.tod !== 'N/A' ? v.tod : 'an unknown time';
+                            const hospital = v.hospital !== 'N/A' ? v.hospital : 'the Hospital';
+                            return `${v.role} ${v.name} succumbed to injuries at ${hospital} on ${date} at ${time} approx.`;
+                        }).join('; '); 
+
+                        resultSentences.push(deceasedList + ' The case was initially registered for grievous hurt.');
+
+                    } else if (injury === "Grievous Hurt") {
+                        const admittedList = injuryGroups[injury].map(v => {
+                            const hospital = v.hospital !== 'N/A' ? v.hospital : 'the Hospital';
+                            return `${v.role} ${v.name} was admitted to ${hospital}`;
+                        }).join(' and '); 
+                        
+                        resultSentences.push(`${admittedList} after sustaining grievous injuries.`);
+
+                    } else if (injury === "Minor Injuries") {
+                        const minorList = injuryGroups[injury].map(v => {
+                            const hospital = v.hospital !== 'N/A' ? v.hospital : 'the Hospital';
+                            return `${v.role} ${v.name} was treated at ${hospital}`;
+                        }).join(' and ');
+
+                        resultSentences.push(`${minorList} after sustaining minor injuries and were discharged after first aid.`);
+
+                    } else if (injury === "No Injuries") {
+                        const names = injuryGroups[injury].map(v => `${v.role} ${v.name}`).join(', ');
+                        resultSentences.push(`Additionally, ${names} escaped unhurt.`);
+                    }
+                }
+            }
+
+            // Join all result sentences with a space for a continuous paragraph flow
+            return resultSentences.join(' ');
+        }
+
+
+        /**
+         * Generates the final report summary as a single paragraph.
+         */
+        function generateTemplateSummary(data) {
+            const dateStr = data.date;
+            const timeStr = data.time;
+            const locationStr = data.location;
+            const causeStr = data.cause;
+            const statusStr = data.status;
+
+            const victimDetails = formatVictimDetails(data.victims);
+            const victimResults = formatVictimResults(data.victims);
+            
+            const template = 
+                `On ${dateStr} at approximately ${timeStr}, an accident occurred at ${locationStr}. The involved parties were ${victimDetails}. ${victimResults} The primary cause of the incident is identified as "${causeStr}". The current case status is ${statusStr}.`;
+
+            return template.trim();
+        }
+
+        /**
+         * Main function called by the button click (via form submission).
+         */
+        function generateSummary(event) {
+            event.preventDefault(); // Stop the form from submitting normally
+            
+            const form = document.getElementById('reportForm');
+            const outputElement = document.getElementById('summaryOutput');
+
+            if (!form.checkValidity()) {
+                outputElement.textContent = `Please check the fields marked by your browser to ensure all required inputs are filled correctly.`;
+                outputElement.classList.add('text-red-600', 'font-semibold');
+                return;
+            }
+
+            outputElement.classList.remove('text-red-600', 'font-semibold');
+
+            // Since validation passed, collect the data
+            const data = collectData();
+
+            // Generate the summary
+            const finalSummary = generateTemplateSummary(data);
+
+            // Display the result
+            outputElement.textContent = finalSummary; // Use textContent to maintain single paragraph structure
+        }
+    </script>
+</body>
+</html>
